@@ -62,7 +62,7 @@ jobs:
       - name: Build APK
         run: |
           mkdir -p project/build
-          godot --headless --path project --export-debug "Android" project/build/GokulSupermarketTycoon.apk
+          godot --headless --verbose --path project --export-debug "Android" project/build/GokulSupermarketTycoon.apk
 
       - name: Verify APK
         run: test -f project/build/GokulSupermarketTycoon.apk
