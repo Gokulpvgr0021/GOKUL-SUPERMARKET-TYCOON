@@ -1,10 +1,11 @@
 
-name: Build Gokul Supermarket Tycoon APK
+name: Gokul Supermarket Tycoon APK Build
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
@@ -16,8 +17,9 @@ jobs:
 
       - name: Extract game project
         run: |
-          mkdir project
+          mkdir -p project
           unzip -q GokulSupermarketTycoon-GitHub-Ready.zip -d project
+          ls -la project
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -25,18 +27,23 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
+      - name: Configure Android SDK
+        run: |
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
 
-      
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
 
-      - name: Install Android packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          yes | sdkmanager --licenses
 
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
@@ -44,24 +51,40 @@ jobs:
           version: 4.4.1
           use-dotnet: false
 
-      - name: Install export templates
+      - name: Install Godot export templates
         run: |
           mkdir -p ~/.local/share/godot/export_templates/4.4.1.stable
-          wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz -O /tmp/templates.tpz
+
+          wget -q \
+            https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz \
+            -O /tmp/templates.tpz
+
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
-          cp /tmp/godot-templates/templates/* ~/.local/share/godot/export_templates/4.4.1.stable/
 
-      - name: Import project
-        run: godot --headless --editor --path project --quit
+          cp /tmp/godot-templates/templates/* \
+            ~/.local/share/godot/export_templates/4.4.1.stable/
 
-      - name: Build APK
+      - name: Import Godot project
         run: |
-          mkdir -p build
-          godot --headless --path project --export-debug "Android" build/GokulSupermarketTycoon.apk
+          godot --headless --editor --path project --quit
+
+      - name: Build Android APK
+        run: |
+          mkdir -p project/build
+
+          godot --headless \
+            --path project \
+            --export-debug "Android" \
+            project/build/GokulSupermarketTycoon.apk
+
+      - name: Verify APK
+        run: |
+          test -f project/build/GokulSupermarketTycoon.apk
+          ls -lh project/build/GokulSupermarketTycoon.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GokulSupermarketTycoon-APK
-          path: build/GokulSupermarketTycoon.apk
+          path: project/build/GokulSupermarketTycoon.apk
           if-no-files-found: error
