@@ -12,11 +12,12 @@ permissions:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -27,24 +28,27 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Extract project
-        run: unzip -q PVGR-TYCOON-APK-BUILD-READY.zip
+      - name: Extract project ZIP
+        run: |
+          unzip -q PVGR-TYCOON-ICON-UPDATED.zip -d extracted
+          ls -la extracted/pvgr-mobile
 
       - name: Install dependencies
-        working-directory: pvgr-mobile
+        working-directory: extracted/pvgr-mobile
         run: npm install --no-audit --no-fund
 
       - name: Setup Android
-        working-directory: pvgr-mobile
+        working-directory: extracted/pvgr-mobile
         run: npm run android:setup
 
       - name: Build APK
-        working-directory: pvgr-mobile
+        working-directory: extracted/pvgr-mobile
         run: npm run android:debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PVGR-TYCOON-APK
-          path: pvgr-mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          path: extracted/pvgr-mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
           retention-days: 14
